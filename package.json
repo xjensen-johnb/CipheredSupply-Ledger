@@ -1,0 +1,29 @@
+{
+  "name": "ciphered-supply-ledger",
+  "version": "1.0.0",
+  "description": "Encrypted supply chain management with FHE",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy": "hardhat run scripts/deploy.js --network sepolia",
+    "verify": "hardhat verify --network sepolia",
+    "test": "hardhat test",
+    "clean": "hardhat clean"
+  },
+  "keywords": [
+    "fhe",
+    "zama",
+    "supply-chain",
+    "blockchain"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.19.0",
+    "dotenv": "^16.3.1"
+  },
+  "dependencies": {
+    "fhevm": "^0.6.2"
+  }
+}
