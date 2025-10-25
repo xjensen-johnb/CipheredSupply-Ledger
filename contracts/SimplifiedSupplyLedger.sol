@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "fhevm/lib/TFHE.sol";
-import "fhevm/config/ZamaFHEVMConfig.sol";
+import "@fhevm/solidity/lib/FHE.sol";
+import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 
 /**
  * @title SimplifiedSupplyLedger
- * @notice Simplified version with only 4 encrypted parameters using fhevm 0.6.2
- * @dev Compatible with Zama relayer-sdk-js 0.2.0
+ * @notice FHE-enabled supply chain with encrypted shipment value
+ * @dev Compatible with Zama relayer-sdk-js 0.2.0 and fhevmjs 0.8.0
  */
-contract SimplifiedSupplyLedger is SepoliaZamaFHEVMConfig {
+contract SimplifiedSupplyLedger is SepoliaConfig {
 
     enum ShipmentStatus {
         Draft,
@@ -24,7 +24,7 @@ contract SimplifiedSupplyLedger is SepoliaZamaFHEVMConfig {
         address shipper;
         address carrier;
         address receiver;
-        // Only 1 encrypted parameter for MVP
+        // Encrypted shipment value
         euint64 valueCipher;
         // Plaintext parameters
         uint256 weightKg;
@@ -76,15 +76,15 @@ contract SimplifiedSupplyLedger is SepoliaZamaFHEVMConfig {
     }
 
     /**
-     * @notice Submit shipment with only VALUE encrypted (ultra-simplified for MVP)
-     * @dev Using fhevm 0.6.2 compatible with relayer-sdk 0.2.0
+     * @notice Submit shipment with encrypted value using FHE
+     * @dev Uses FHE.fromExternal for proper encryption verification
      */
     function submitShipment(
         bytes32 shipmentId,
         address carrier,
         address receiver,
-        // Only VALUE encrypted
-        bytes calldata encryptedValue,
+        // Encrypted value with proof
+        externalEuint64 encryptedValue,
         bytes calldata valueProof,
         // All other params in plaintext
         uint256 weightKg,
@@ -99,10 +99,10 @@ contract SimplifiedSupplyLedger is SepoliaZamaFHEVMConfig {
         require(carrier != address(0), "Invalid carrier");
         require(receiver != address(0), "Invalid receiver");
 
-        // Convert bytes to encrypted value (compatible with relayer-sdk 0.2.0)
-        euint64 value = TFHE.asEuint64(abi.decode(encryptedValue, (uint256)));
-        TFHE.allow(value, address(this));
-        TFHE.allow(value, msg.sender);
+        // Convert external encrypted input to euint64 with proof verification
+        euint64 value = FHE.fromExternal(encryptedValue, valueProof);
+        FHE.allow(value, address(this));
+        FHE.allow(value, msg.sender);
 
         Shipment storage shipment = shipments[shipmentId];
         shipment.shipmentId = shipmentId;
@@ -218,7 +218,7 @@ contract SimplifiedSupplyLedger is SepoliaZamaFHEVMConfig {
     function assessRisk(bytes32 shipmentId) external view returns (bool) {
         Shipment storage shipment = shipments[shipmentId];
         require(shipment.isActive, "Shipment not active");
-        
+
         // Simple risk assessment based on risk code
         return shipment.riskCode < 5; // Low risk if risk code < 5
     }
