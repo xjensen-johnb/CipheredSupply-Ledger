@@ -1,0 +1,178 @@
+/* Ant Design Custom Overrides for Blockchain Tech Style */
+
+/* Global Ant Design Theme Overrides */
+.ant-layout {
+  background: #050709 !important;
+}
+
+.ant-card {
+  background: #0F1419 !important;
+  border-color: #1E293B !important;
+}
+
+.ant-table {
+  background: transparent !important;
+}
+
+.ant-table-thead > tr > th {
+  background: #1A1F2A !important;
+  color: #94A3B8 !important;
+  border-color: #1E293B !important;
+}
+
+.ant-table-tbody > tr > td {
+  border-color: #1E293B !important;
+  color: #E5E7EB !important;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: #1A1F2A !important;
+}
+
+.ant-menu {
+  background: transparent !important;
+}
+
+.ant-menu-item-selected {
+  background: #1A1F2A !important;
+}
+
+.ant-menu-item:hover {
+  background: #1A1F2A !important;
+}
+
+.ant-modal-content {
+  background: #0F1419 !important;
+  border: 1px solid #1E293B !important;
+}
+
+.ant-modal-header {
+  background: #0F1419 !important;
+  border-color: #1E293B !important;
+}
+
+.ant-modal-footer {
+  border-color: #1E293B !important;
+}
+
+.ant-input,
+.ant-input-number,
+.ant-select-selector,
+.ant-picker {
+  background: #1A1F2A !important;
+  border-color: #334155 !important;
+  color: #E5E7EB !important;
+}
+
+.ant-input:hover,
+.ant-input-number:hover,
+.ant-select-selector:hover,
+.ant-picker:hover {
+  border-color: #2563EB !important;
+}
+
+.ant-input:focus,
+.ant-input-number:focus,
+.ant-select-focused .ant-select-selector,
+.ant-picker-focused {
+  border-color: #2563EB !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
+}
+
+.ant-btn-primary {
+  background: #2563EB !important;
+  border-color: #2563EB !important;
+}
+
+.ant-btn-primary:hover {
+  background: #3B82F6 !important;
+  border-color: #3B82F6 !important;
+}
+
+.ant-tabs-tab {
+  color: #94A3B8 !important;
+}
+
+.ant-tabs-tab-active {
+  color: #2563EB !important;
+}
+
+.ant-tabs-ink-bar {
+  background: #2563EB !important;
+}
+
+.ant-timeline-item-tail {
+  border-color: #1E293B !important;
+}
+
+.ant-progress-bg {
+  background: linear-gradient(90deg, #2563EB, #0EA5E9) !important;
+}
+
+.ant-tag {
+  background: rgba(37, 99, 235, 0.1) !important;
+  border: 1px solid rgba(37, 99, 235, 0.3) !important;
+  color: #2563EB !important;
+}
+
+.ant-tag-green {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: #10B981 !important;
+}
+
+.ant-tag-blue {
+  background: rgba(37, 99, 235, 0.1) !important;
+  border-color: rgba(37, 99, 235, 0.3) !important;
+  color: #2563EB !important;
+}
+
+.ant-tag-orange {
+  background: rgba(245, 158, 11, 0.1) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+  color: #F59E0B !important;
+}
+
+.ant-tag-cyan {
+  background: rgba(6, 182, 212, 0.1) !important;
+  border-color: rgba(6, 182, 212, 0.3) !important;
+  color: #06B6D4 !important;
+}
+
+/* Remove purple colors completely */
+.ant-tag-purple,
+.ant-tag-magenta {
+  background: rgba(37, 99, 235, 0.1) !important;
+  border-color: rgba(37, 99, 235, 0.3) !important;
+  color: #2563EB !important;
+}
+
+/* Dropdown styles */
+.ant-dropdown {
+  background: #0F1419 !important;
+  border: 1px solid #1E293B !important;
+}
+
+.ant-dropdown-menu-item:hover {
+  background: #1A1F2A !important;
+}
+
+/* Alert styles */
+.ant-alert-info {
+  background: rgba(37, 99, 235, 0.1) !important;
+  border: 1px solid rgba(37, 99, 235, 0.3) !important;
+}
+
+.ant-alert-success {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+
+/* Statistic styles */
+.ant-statistic-title {
+  color: #94A3B8 !important;
+}
+
+.ant-statistic-content-value {
+  color: #E5E7EB !important;
+}
