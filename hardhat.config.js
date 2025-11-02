@@ -1,10 +1,12 @@
 require("@nomicfoundation/hardhat-ethers");
+require("@nomicfoundation/hardhat-toolbox");
+require("@fhevm/hardhat-plugin");
 require("dotenv").config();
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
-    version: "0.8.24",
+    version: "0.8.28",
     settings: {
       optimizer: {
         enabled: true,
@@ -15,6 +17,9 @@ module.exports = {
     },
   },
   networks: {
+    hardhat: {
+      chainId: 31337,
+    },
     sepolia: {
       url: process.env.SEPOLIA_RPC_URL || "https://sepolia.infura.io/v3/YOUR_INFURA_KEY",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
@@ -33,5 +38,12 @@ module.exports = {
     tests: "./test",
     cache: "./cache",
     artifacts: "./artifacts",
+  },
+  typechain: {
+    outDir: "typechain-types",
+    target: "ethers-v6",
+  },
+  mocha: {
+    timeout: 120000,
   },
 };
