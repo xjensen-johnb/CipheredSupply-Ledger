@@ -1,26 +1,96 @@
 import { getAddress, hexlify } from 'ethers';
 
+/**
+ * FHE SDK Wrapper using Zama's CDN-loaded Relayer SDK
+ *
+ * This module uses the SDK loaded via script tag in index.html:
+ * https://cdn.zama.org/relayer-sdk-js/0.3.0-5/relayer-sdk-js.umd.cjs
+ */
+
+declare global {
+  interface Window {
+    RelayerSDK?: any;
+    relayerSDK?: any;
+    ethereum?: any;
+    okxwallet?: any;
+  }
+}
+
 let fheInstance: any = null;
 
 /**
- * Initialize FHE instance using Zama's official CDN SDK
- * Using the same approach as CipheredMicroloan-Bazaar
+ * Get the SDK from window object
  */
-export const initializeFHEVM = async (): Promise<any> => {
+const getSDK = () => {
+  if (typeof window === 'undefined') {
+    throw new Error('FHE SDK requires a browser environment');
+  }
+  const sdk = window.RelayerSDK || window.relayerSDK;
+  if (!sdk) {
+    throw new Error(
+      'Relayer SDK not loaded. Ensure the CDN script tag is present in index.html.'
+    );
+  }
+  return sdk;
+};
+
+/**
+ * Check if SDK is loaded from CDN
+ */
+export const isSDKLoaded = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return !!(window.RelayerSDK || window.relayerSDK);
+};
+
+/**
+ * Wait for FHE SDK to be loaded (with timeout)
+ */
+export const waitForSDK = async (timeoutMs: number = 10000): Promise<boolean> => {
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < timeoutMs) {
+    if (isSDKLoaded()) {
+      return true;
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  return false;
+};
+
+/**
+ * Initialize FHE instance using Zama's CDN SDK
+ */
+export const initializeFHEVM = async (provider?: any): Promise<any> => {
   if (fheInstance) {
     console.log('[FHE] Instance already initialized');
     return fheInstance;
   }
 
-  if (typeof window === 'undefined' || !window.ethereum) {
-    throw new Error('Ethereum provider not found. Please install MetaMask.');
+  if (typeof window === 'undefined') {
+    throw new Error('FHE SDK requires a browser environment');
+  }
+
+  // Get ethereum provider
+  const ethereumProvider =
+    provider || window.ethereum || window.okxwallet?.provider || window.okxwallet;
+
+  if (!ethereumProvider) {
+    throw new Error('No wallet provider detected. Connect a wallet first.');
   }
 
   try {
-    console.log('[FHE] Loading SDK from Zama CDN 0.2.0...');
-    const sdk: any = await import(
-      'https://cdn.zama.ai/relayer-sdk-js/0.2.0/relayer-sdk-js.js'
-    );
+    // Wait for SDK to be loaded if not ready
+    if (!isSDKLoaded()) {
+      console.log('[FHE] Waiting for SDK to load from CDN...');
+      const loaded = await waitForSDK(15000);
+      if (!loaded) {
+        throw new Error('FHE SDK failed to load from CDN within timeout');
+      }
+    }
+
+    console.log('[FHE] SDK loaded, initializing...');
+    const sdk = getSDK();
     const { initSDK, createInstance, SepoliaConfig } = sdk;
 
     console.log('[FHE] Initializing WASM...');
@@ -28,7 +98,7 @@ export const initializeFHEVM = async (): Promise<any> => {
 
     const config = {
       ...SepoliaConfig,
-      network: window.ethereum
+      network: ethereumProvider,
     };
 
     console.log('[FHE] Creating instance...');
@@ -59,12 +129,32 @@ export const resetFHEVM = (): void => {
 };
 
 /**
+ * Check if FHE is initialized
+ */
+export const isFHEInitialized = (): boolean => {
+  return fheInstance !== null;
+};
+
+/**
+ * Get FHE status for debugging
+ */
+export const getFHEStatus = (): {
+  sdkLoaded: boolean;
+  instanceReady: boolean;
+} => {
+  return {
+    sdkLoaded: isSDKLoaded(),
+    instanceReady: fheInstance !== null,
+  };
+};
+
+/**
  * Ensure FHE instance is initialized
  */
-const ensureInstance = async () => {
+const ensureInstance = async (provider?: any) => {
   let fhe = getFHEVMInstance();
   if (!fhe) {
-    fhe = await initializeFHEVM();
+    fhe = await initializeFHEVM(provider);
   }
   if (!fhe) throw new Error('Failed to initialize FHE instance');
   return fhe;
@@ -76,25 +166,29 @@ const ensureInstance = async () => {
 export const encryptUint64 = async (
   value: number | bigint,
   contractAddress: string,
-  userAddress: string
+  userAddress: string,
+  provider?: any
 ): Promise<{ data: string; proof: string }> => {
-  const fhe = await ensureInstance();
+  const fhe = await ensureInstance(provider);
   const contractAddressChecksum = getAddress(contractAddress);
+  const userAddressChecksum = getAddress(userAddress);
 
   console.log('[FHE] Creating encrypted input for uint64...');
-  const ciphertext = await fhe.createEncryptedInput(
-    contractAddressChecksum,
-    userAddress
-  );
-  ciphertext.add64(BigInt(value));
+  const input = fhe.createEncryptedInput(contractAddressChecksum, userAddressChecksum);
+  input.add64(BigInt(value));
 
   console.log('[FHE] Encrypting uint64 value...');
-  const { handles, inputProof } = await ciphertext.encrypt();
+  const { handles, inputProof } = await input.encrypt();
+
+  if (handles.length < 1) {
+    throw new Error('FHE SDK returned insufficient handles');
+  }
+
   const handle = hexlify(handles[0]);
   const proof = hexlify(inputProof);
 
   console.log('[FHE] ✅ uint64 encryption successful');
-  return { data: handle, proof: proof };
+  return { data: handle, proof };
 };
 
 /**
@@ -103,25 +197,29 @@ export const encryptUint64 = async (
 export const encryptUint32 = async (
   value: number,
   contractAddress: string,
-  userAddress: string
+  userAddress: string,
+  provider?: any
 ): Promise<{ data: string; proof: string }> => {
-  const fhe = await ensureInstance();
+  const fhe = await ensureInstance(provider);
   const contractAddressChecksum = getAddress(contractAddress);
+  const userAddressChecksum = getAddress(userAddress);
 
   console.log('[FHE] Creating encrypted input for uint32...');
-  const ciphertext = await fhe.createEncryptedInput(
-    contractAddressChecksum,
-    userAddress
-  );
-  ciphertext.add32(value);
+  const input = fhe.createEncryptedInput(contractAddressChecksum, userAddressChecksum);
+  input.add32(value);
 
   console.log('[FHE] Encrypting uint32 value...');
-  const { handles, inputProof } = await ciphertext.encrypt();
+  const { handles, inputProof } = await input.encrypt();
+
+  if (handles.length < 1) {
+    throw new Error('FHE SDK returned insufficient handles');
+  }
+
   const handle = hexlify(handles[0]);
   const proof = hexlify(inputProof);
 
   console.log('[FHE] ✅ uint32 encryption successful');
-  return { data: handle, proof: proof };
+  return { data: handle, proof };
 };
 
 /**
@@ -130,25 +228,29 @@ export const encryptUint32 = async (
 export const encryptUint16 = async (
   value: number,
   contractAddress: string,
-  userAddress: string
+  userAddress: string,
+  provider?: any
 ): Promise<{ data: string; proof: string }> => {
-  const fhe = await ensureInstance();
+  const fhe = await ensureInstance(provider);
   const contractAddressChecksum = getAddress(contractAddress);
+  const userAddressChecksum = getAddress(userAddress);
 
   console.log('[FHE] Creating encrypted input for uint16...');
-  const ciphertext = await fhe.createEncryptedInput(
-    contractAddressChecksum,
-    userAddress
-  );
-  ciphertext.add16(value);
+  const input = fhe.createEncryptedInput(contractAddressChecksum, userAddressChecksum);
+  input.add16(value);
 
   console.log('[FHE] Encrypting uint16 value...');
-  const { handles, inputProof } = await ciphertext.encrypt();
+  const { handles, inputProof } = await input.encrypt();
+
+  if (handles.length < 1) {
+    throw new Error('FHE SDK returned insufficient handles');
+  }
+
   const handle = hexlify(handles[0]);
   const proof = hexlify(inputProof);
 
   console.log('[FHE] ✅ uint16 encryption successful');
-  return { data: handle, proof: proof };
+  return { data: handle, proof };
 };
 
 /**
@@ -157,32 +259,35 @@ export const encryptUint16 = async (
 export const encryptUint8 = async (
   value: number,
   contractAddress: string,
-  userAddress: string
+  userAddress: string,
+  provider?: any
 ): Promise<{ data: string; proof: string }> => {
-  const fhe = await ensureInstance();
+  const fhe = await ensureInstance(provider);
   const contractAddressChecksum = getAddress(contractAddress);
+  const userAddressChecksum = getAddress(userAddress);
 
   console.log('[FHE] Creating encrypted input for uint8...');
-  const ciphertext = await fhe.createEncryptedInput(
-    contractAddressChecksum,
-    userAddress
-  );
-  ciphertext.add8(value);
+  const input = fhe.createEncryptedInput(contractAddressChecksum, userAddressChecksum);
+  input.add8(value);
 
   console.log('[FHE] Encrypting uint8 value...');
-  const { handles, inputProof } = await ciphertext.encrypt();
+  const { handles, inputProof } = await input.encrypt();
+
+  if (handles.length < 1) {
+    throw new Error('FHE SDK returned insufficient handles');
+  }
+
   const handle = hexlify(handles[0]);
   const proof = hexlify(inputProof);
 
   console.log('[FHE] ✅ uint8 encryption successful');
-  return { data: handle, proof: proof };
+  return { data: handle, proof };
 };
 
 /**
  * Helper to convert encrypted data to contract input format
  */
 export const toContractInput = (encrypted: string): string => {
-  // Return the encrypted handle as-is (it's already a proper hex string)
   return encrypted;
 };
 
@@ -208,11 +313,4 @@ export const publicDecrypt = async (handle: string): Promise<number> => {
     console.error('[FHE] ❌ Decryption failed:', error);
     throw error;
   }
-};
-
-/**
- * Check if FHE is initialized
- */
-export const isFHEInitialized = (): boolean => {
-  return fheInstance !== null;
 };
