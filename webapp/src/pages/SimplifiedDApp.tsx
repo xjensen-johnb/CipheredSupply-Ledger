@@ -12,13 +12,15 @@ import {
   Space,
   Alert,
   message,
+  notification,
   InputNumber,
   Row,
   Col,
   Divider,
   Typography,
 } from 'antd';
-import { useAccount } from 'wagmi';
+import { useAccount, useChainId } from 'wagmi';
+import { getTransactionUrl, shortenHash, getExplorerName } from '@/utils/explorer';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { motion } from 'framer-motion';
 import {
@@ -28,6 +30,8 @@ import {
   ThunderboltOutlined,
   CheckCircleOutlined,
   RocketOutlined,
+  LinkOutlined,
+  CloseCircleOutlined,
 } from '@ant-design/icons';
 import {
   useSimplifiedSupplyLedger,
@@ -39,6 +43,7 @@ const { Title, Text, Paragraph } = Typography;
 
 const SimplifiedDApp: React.FC = () => {
   const { address, isConnected } = useAccount();
+  const chainId = useChainId();
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [shipmentForm] = Form.useForm();
@@ -51,6 +56,110 @@ const SimplifiedDApp: React.FC = () => {
     isReady,
     contractAddress,
   } = useSimplifiedSupplyLedger();
+
+  // Transaction notification helpers
+  const showTransactionSuccess = (txHash: string, title: string, description: string) => {
+    const explorerUrl = getTransactionUrl(txHash, chainId);
+    const explorerName = getExplorerName(chainId);
+
+    notification.success({
+      message: title,
+      description: (
+        <div>
+          <p style={{ marginBottom: 8 }}>{description}</p>
+          <a
+            href={explorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              color: '#1890ff',
+            }}
+          >
+            <LinkOutlined />
+            View on {explorerName}: {shortenHash(txHash)}
+          </a>
+        </div>
+      ),
+      duration: 10,
+      placement: 'topRight',
+    });
+  };
+
+  const showTransactionError = (error: any, txHash?: string) => {
+    const explorerUrl = txHash ? getTransactionUrl(txHash, chainId) : null;
+    const explorerName = getExplorerName(chainId);
+
+    notification.error({
+      message: 'Transaction Failed',
+      description: (
+        <div>
+          <p style={{ marginBottom: 8, color: '#ff4d4f' }}>
+            {error?.shortMessage || error?.message || 'Transaction failed'}
+          </p>
+          {txHash && explorerUrl && (
+            <a
+              href={explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                color: '#1890ff',
+              }}
+            >
+              <LinkOutlined />
+              View on {explorerName}: {shortenHash(txHash)}
+            </a>
+          )}
+        </div>
+      ),
+      duration: 15,
+      placement: 'topRight',
+      icon: <CloseCircleOutlined style={{ color: '#ff4d4f' }} />,
+    });
+  };
+
+  const showTransactionPending = (txHash: string) => {
+    const explorerUrl = getTransactionUrl(txHash, chainId);
+    const explorerName = getExplorerName(chainId);
+
+    notification.info({
+      key: `tx-pending-${txHash}`,
+      message: 'Transaction Pending',
+      description: (
+        <div>
+          <p style={{ marginBottom: 8 }}>
+            <LoadingOutlined spin style={{ marginRight: 8 }} />
+            Waiting for on-chain confirmation...
+          </p>
+          <a
+            href={explorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              color: '#1890ff',
+            }}
+          >
+            <LinkOutlined />
+            Track on {explorerName}: {shortenHash(txHash)}
+          </a>
+        </div>
+      ),
+      duration: 0,
+      placement: 'topRight',
+    });
+  };
+
+  const closeTransactionPending = (txHash: string) => {
+    notification.destroy(`tx-pending-${txHash}`);
+  };
 
   const handleModalClose = () => {
     setModalVisible(false);
@@ -69,9 +178,10 @@ const SimplifiedDApp: React.FC = () => {
     }
 
     setLoading(true);
+    let currentTxHash: string | undefined;
 
     const hideLoading = message.loading({
-      content: '🔐 Encrypting 4 parameters... (Expected: 20-30 seconds)',
+      content: '🔐 Encrypting shipment value... (Expected: 10-20 seconds)',
       duration: 0,
       key: 'encrypt-loading',
     });
@@ -106,21 +216,51 @@ const SimplifiedDApp: React.FC = () => {
 
       console.log('Submitting simplified shipment:', shipmentData);
 
-      await submitShipment(shipmentData, (progressMsg) => {
-        message.loading({
-          content: progressMsg,
-          duration: 0,
-          key: 'encrypt-loading',
-        });
+      const result = await submitShipment(shipmentData, (progressMsg) => {
+        // Check if the message contains a tx hash (means tx was submitted)
+        if (progressMsg.includes('0x') && progressMsg.includes('Waiting')) {
+          hideLoading();
+          // Extract tx hash from message for pending notification
+          const hashMatch = progressMsg.match(/(0x[a-fA-F0-9]+)/);
+          if (hashMatch) {
+            currentTxHash = hashMatch[1];
+            showTransactionPending(currentTxHash);
+          }
+        } else {
+          message.loading({
+            content: progressMsg,
+            duration: 0,
+            key: 'encrypt-loading',
+          });
+        }
       });
 
+      // Close pending notification
+      if (result.txHash) {
+        closeTransactionPending(result.txHash);
+      }
+
       hideLoading();
-      message.success(`Shipment submitted! ID: ${uniqueId.substring(0, 10)}...`);
+
+      // Show success notification with transaction link
+      showTransactionSuccess(
+        result.txHash,
+        'Shipment Submitted Successfully',
+        `Shipment ID: ${uniqueId.substring(0, 10)}... has been recorded on-chain.`
+      );
+
       handleModalClose();
     } catch (error: any) {
       console.error('Failed to submit shipment:', error);
       hideLoading();
-      message.error(error?.message || 'Failed to submit shipment');
+
+      // Close pending notification if exists
+      if (currentTxHash) {
+        closeTransactionPending(currentTxHash);
+      }
+
+      // Show error notification with transaction link if available
+      showTransactionError(error, error?.txHash || currentTxHash);
     } finally {
       setLoading(false);
     }
