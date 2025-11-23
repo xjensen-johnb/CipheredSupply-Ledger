@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.28;
 
-import "@fhevm/solidity/lib/FHE.sol";
-import {SepoliaConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
+import {FHE, euint64, externalEuint64} from "@fhevm/solidity/lib/FHE.sol";
+import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 
 /**
  * @title SimplifiedSupplyLedger
  * @notice FHE-enabled supply chain with encrypted shipment value
- * @dev Compatible with Zama relayer-sdk-js 0.2.0 and fhevmjs 0.8.0
+ * @dev Compatible with Zama fhEVM v0.9.1
  */
-contract SimplifiedSupplyLedger is SepoliaConfig {
+contract SimplifiedSupplyLedger is ZamaEthereumConfig {
 
     enum ShipmentStatus {
         Draft,
@@ -44,6 +44,11 @@ contract SimplifiedSupplyLedger is SepoliaConfig {
     mapping(bytes32 => Shipment) public shipments;
     mapping(address => bool) public authorizedCarriers;
 
+    // Track shipments by user address
+    mapping(address => bytes32[]) public shipperShipments;
+    mapping(address => bytes32[]) public carrierShipments;
+    mapping(address => bytes32[]) public receiverShipments;
+
     uint256 public shipmentCount;
     uint256 public deliveredCount;
 
@@ -77,7 +82,7 @@ contract SimplifiedSupplyLedger is SepoliaConfig {
 
     /**
      * @notice Submit shipment with encrypted value using FHE
-     * @dev Uses FHE.fromExternal for proper encryption verification
+     * @dev Uses FHE.fromExternal to verify and convert external encrypted input (v0.9.1 API)
      */
     function submitShipment(
         bytes32 shipmentId,
@@ -120,6 +125,11 @@ contract SimplifiedSupplyLedger is SepoliaConfig {
         shipment.status = ShipmentStatus.Submitted;
         shipment.submittedAt = block.timestamp;
         shipment.isActive = true;
+
+        // Track shipments for each participant
+        shipperShipments[msg.sender].push(shipmentId);
+        carrierShipments[carrier].push(shipmentId);
+        receiverShipments[receiver].push(shipmentId);
 
         shipmentCount++;
 
@@ -242,5 +252,60 @@ contract SimplifiedSupplyLedger is SepoliaConfig {
     function isInspector(address account) external view returns (bool) {
         // Placeholder for future inspector functionality
         return false;
+    }
+
+    /**
+     * @notice Get all shipment IDs created by a shipper
+     * @param shipper The address of the shipper
+     * @return Array of shipment IDs
+     */
+    function getShipmentsByShipper(address shipper) external view returns (bytes32[] memory) {
+        return shipperShipments[shipper];
+    }
+
+    /**
+     * @notice Get the count of shipments created by a shipper
+     * @param shipper The address of the shipper
+     * @return Number of shipments
+     */
+    function getShipperShipmentCount(address shipper) external view returns (uint256) {
+        return shipperShipments[shipper].length;
+    }
+
+    /**
+     * @notice Get all shipment IDs assigned to a carrier
+     * @param carrier The address of the carrier
+     * @return Array of shipment IDs
+     */
+    function getShipmentsByCarrier(address carrier) external view returns (bytes32[] memory) {
+        return carrierShipments[carrier];
+    }
+
+    /**
+     * @notice Get all shipment IDs for a receiver
+     * @param receiver The address of the receiver
+     * @return Array of shipment IDs
+     */
+    function getShipmentsByReceiver(address receiver) external view returns (bytes32[] memory) {
+        return receiverShipments[receiver];
+    }
+
+    /**
+     * @notice Get all shipments related to an address (as shipper, carrier, or receiver)
+     * @param user The address to query
+     * @return asShipper Array of shipment IDs where user is shipper
+     * @return asCarrier Array of shipment IDs where user is carrier
+     * @return asReceiver Array of shipment IDs where user is receiver
+     */
+    function getAllUserShipments(address user) external view returns (
+        bytes32[] memory asShipper,
+        bytes32[] memory asCarrier,
+        bytes32[] memory asReceiver
+    ) {
+        return (
+            shipperShipments[user],
+            carrierShipments[user],
+            receiverShipments[user]
+        );
     }
 }
