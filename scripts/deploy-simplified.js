@@ -2,7 +2,7 @@ const hre = require("hardhat");
 
 async function main() {
   console.log("🚀 Starting SimplifiedSupplyLedger deployment to Sepolia...\n");
-  console.log("⚡ Using @fhevm/solidity 0.8.0 with FHE library - compatible with relayer-sdk 0.2.0!\n");
+  console.log("⚡ Using @fhevm/solidity 0.9.1 with FHE library - compatible with relayer-sdk 0.3.0-5!\n");
 
   const [deployer] = await hre.ethers.getSigners();
 
@@ -39,13 +39,13 @@ async function main() {
   console.log("Contract: SimplifiedSupplyLedger");
   console.log("Address:", contractAddress);
   console.log("Deployer:", deployer.address);
-  console.log("@fhevm/solidity version: 0.8.0 (FHE library)");
+  console.log("@fhevm/solidity version: 0.9.1 (FHE library)");
   console.log("=====================================");
 
   console.log("\n📝 Next Steps:");
   console.log("1. Update your webapp/.env file:");
   console.log(`   VITE_SIMPLIFIED_SUPPLY_LEDGER_ADDRESS=${contractAddress}`);
-  console.log("2. Test the working FHE encryption with relayer-sdk 0.2.0 and fhevmjs 0.8.0!");
+  console.log("2. Test the working FHE encryption with relayer-sdk 0.3.0-5!");
 }
 
 main()
