@@ -47,6 +47,13 @@ export const SIMPLIFIED_SUPPLY_LEDGER_ABI = [
   'function shipmentCount() view returns (uint256)',
   'function deliveredCount() view returns (uint256)',
 
+  // User shipment queries
+  'function getShipmentsByShipper(address shipper) view returns (bytes32[])',
+  'function getShipperShipmentCount(address shipper) view returns (uint256)',
+  'function getShipmentsByCarrier(address carrier) view returns (bytes32[])',
+  'function getShipmentsByReceiver(address receiver) view returns (bytes32[])',
+  'function getAllUserShipments(address user) view returns (bytes32[] asShipper, bytes32[] asCarrier, bytes32[] asReceiver)',
+
   // Events
   'event ShipmentSubmitted(bytes32 indexed shipmentId, address indexed shipper, address indexed carrier, string category, uint256 timestamp)',
   'event ShipmentStatusChanged(bytes32 indexed shipmentId, uint8 oldStatus, uint8 newStatus, uint256 timestamp)',
@@ -266,6 +273,7 @@ export const useSimplifiedSupplyLedger = () => {
 
       onProgress?.(`✅ Encryption done (${encryptionTime}s). Submitting to blockchain...`);
 
+      let txHash: string | undefined;
       try {
         console.log('[SimplifiedSubmitShipment] Calling contract.submitShipment...');
         const tx = await contract.submitShipment(
@@ -288,22 +296,28 @@ export const useSimplifiedSupplyLedger = () => {
           }
         );
 
+        txHash = tx.hash;
         console.log('[SimplifiedSubmitShipment] Transaction sent, hash:', tx.hash);
-        onProgress?.('⏳ Waiting for confirmation on-chain...');
+        onProgress?.(`⏳ Waiting for confirmation on-chain... (${tx.hash.substring(0, 10)}...)`);
         console.log('[SimplifiedSubmitShipment] Waiting for transaction confirmation...');
         const receipt = await tx.wait();
         console.log('[SimplifiedSubmitShipment] Transaction confirmed, receipt:', receipt);
         console.log('[SimplifiedSubmitShipment] Gas used:', receipt.gasUsed.toString());
-        return { shipmentId, receipt };
+        return { shipmentId, receipt, txHash: tx.hash };
       } catch (error: any) {
         console.error('[SimplifiedSubmitShipment] Contract call error:', error);
         console.error('[SimplifiedSubmitShipment] Error details:', {
           message: error?.message,
           code: error?.code,
           data: error?.data,
+          txHash,
         });
+        // Attach txHash to error for UI display
+        error.txHash = txHash;
         if (error.code === 'CALL_EXCEPTION') {
-          throw new Error('Contract call failed. Please check if the contract is deployed and you have permission to submit shipments.');
+          const enhancedError = new Error('Contract call failed. Please check if the contract is deployed and you have permission to submit shipments.');
+          (enhancedError as any).txHash = txHash;
+          throw enhancedError;
         }
         throw error;
       }
@@ -318,10 +332,11 @@ export const useSimplifiedSupplyLedger = () => {
 
       onProgress?.('Starting shipment transit...');
       const tx = await contract.startTransit(shipmentId);
+      const txHash = tx.hash;
 
-      onProgress?.('Waiting for confirmation...');
+      onProgress?.(`Waiting for confirmation... (${txHash.substring(0, 10)}...)`);
       const receipt = await tx.wait();
-      return { shipmentId, receipt };
+      return { shipmentId, receipt, txHash };
     },
     [contract, address, chain]
   );
@@ -333,10 +348,11 @@ export const useSimplifiedSupplyLedger = () => {
 
       onProgress?.('Marking shipment as delivered...');
       const tx = await contract.markDelivered(shipmentId);
+      const txHash = tx.hash;
 
-      onProgress?.('Waiting for confirmation...');
+      onProgress?.(`Waiting for confirmation... (${txHash.substring(0, 10)}...)`);
       const receipt = await tx.wait();
-      return { shipmentId, receipt };
+      return { shipmentId, receipt, txHash };
     },
     [contract, address, chain]
   );
@@ -348,10 +364,11 @@ export const useSimplifiedSupplyLedger = () => {
 
       onProgress?.('Marking shipment as lost...');
       const tx = await contract.markLost(shipmentId);
+      const txHash = tx.hash;
 
-      onProgress?.('Waiting for confirmation...');
+      onProgress?.(`Waiting for confirmation... (${txHash.substring(0, 10)}...)`);
       const receipt = await tx.wait();
-      return { shipmentId, receipt };
+      return { shipmentId, receipt, txHash };
     },
     [contract, address, chain]
   );
@@ -432,6 +449,70 @@ export const useSimplifiedSupplyLedger = () => {
     [contract, address, chain]
   );
 
+  const fetchUserShipments = useCallback(
+    async (userAddress?: string): Promise<{
+      asShipper: SimplifiedShipmentInfo[];
+      asCarrier: SimplifiedShipmentInfo[];
+      asReceiver: SimplifiedShipmentInfo[];
+    }> => {
+      const { contract } = requireReady();
+      const targetUser = userAddress || address;
+      if (!targetUser) throw new Error('No user address');
+
+      const [shipperIds, carrierIds, receiverIds] = await contract.getAllUserShipments(targetUser);
+
+      const fetchShipmentDetails = async (ids: string[]): Promise<SimplifiedShipmentInfo[]> => {
+        const shipments: SimplifiedShipmentInfo[] = [];
+        for (const id of ids) {
+          try {
+            const info = await contract.getShipmentInfo(id);
+            const categoryLabel = info[3] as string;
+            const statusIndex = Number(info[4]);
+            shipments.push({
+              shipmentId: id as `0x${string}`,
+              shipper: info[0] as string,
+              carrier: info[1] as string,
+              receiver: info[2] as string,
+              categoryIndex: CARGO_CATEGORIES.indexOf(categoryLabel as any) ?? -1,
+              categoryLabel,
+              statusIndex,
+              statusLabel: SHIPMENT_STATUS[statusIndex] ?? 'Unknown',
+              submittedAt: Number(info[5]),
+              deliveredAt: Number(info[6]),
+              isActive: Boolean(info[7]),
+              temperature: Number(info[10]),
+              humidity: Number(info[11]),
+              priority: Number(info[12]),
+            });
+          } catch (e) {
+            console.error(`Failed to fetch shipment ${id}:`, e);
+          }
+        }
+        return shipments;
+      };
+
+      const [asShipper, asCarrier, asReceiver] = await Promise.all([
+        fetchShipmentDetails(shipperIds),
+        fetchShipmentDetails(carrierIds),
+        fetchShipmentDetails(receiverIds),
+      ]);
+
+      return { asShipper, asCarrier, asReceiver };
+    },
+    [contract, address, chain]
+  );
+
+  const fetchShipperShipmentCount = useCallback(
+    async (shipperAddress?: string): Promise<number> => {
+      const { contract } = requireReady();
+      const targetShipper = shipperAddress || address;
+      if (!targetShipper) throw new Error('No shipper address');
+      const count = await contract.getShipperShipmentCount(targetShipper);
+      return Number(count);
+    },
+    [contract, address, chain]
+  );
+
   return {
     contract,
     contractAddress,
@@ -447,6 +528,9 @@ export const useSimplifiedSupplyLedger = () => {
     fetchShipment,
     fetchSupplyStats,
     assessRisk,
+    // User shipment queries
+    fetchUserShipments,
+    fetchShipperShipmentCount,
     // Admin functions
     authorizeCarrier,
     addInspector,
