@@ -17,6 +17,7 @@ import HowItWorks from './pages/HowItWorks';
 import Documentation from './pages/Documentation';
 import DApp from './pages/DApp';
 import SimplifiedDApp from './pages/SimplifiedDApp';
+import MyShipments from './pages/MyShipments';
 import Roadmap from './pages/Roadmap';
 import NotFound from "./pages/NotFound";
 
@@ -45,6 +46,7 @@ const App = () => {
                   <Route path="docs" element={<Documentation />} />
                   <Route path="dapp" element={<SimplifiedDApp />} />
                   <Route path="simplified" element={<SimplifiedDApp />} />
+                  <Route path="my-shipments" element={<MyShipments />} />
                   <Route path="roadmap" element={<Roadmap />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>

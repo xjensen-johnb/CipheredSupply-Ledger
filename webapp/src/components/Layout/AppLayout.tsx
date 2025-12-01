@@ -9,6 +9,7 @@ import {
   AppstoreOutlined,
   RocketOutlined,
   MenuOutlined,
+  InboxOutlined,
 } from '@ant-design/icons';
 import { motion } from 'framer-motion';
 
@@ -43,6 +44,12 @@ const AppLayout: React.FC = () => {
       icon: <AppstoreOutlined />,
       label: 'DApp',
       path: '/dapp',
+    },
+    {
+      key: '/my-shipments',
+      icon: <InboxOutlined />,
+      label: 'My Shipments',
+      path: '/my-shipments',
     },
     {
       key: '/roadmap',
