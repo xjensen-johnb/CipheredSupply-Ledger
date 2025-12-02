@@ -1,8 +1,8 @@
 {
   "network": "sepolia",
-  "contractAddress": "0x936Cb4D44E05cD7f3ffEB80fb5FEE143466b4641",
+  "contractAddress": "0xCc646f17e76bF7Af33bAA567546711DBa6d2dAc4",
   "deployer": "0xDdF0E7d0821758F3A9bbA72d2ad40b0549Afbe62",
-  "deploymentTime": "2025-10-16T16:06:13.967Z",
-  "transactionHash": "0x6e05d6ac6a459d0f25cb9e0c452c2555c967ed41ae00649913951db6844a2c6d",
+  "deploymentTime": "2025-12-04T04:00:49.486Z",
+  "transactionHash": "0xc54ce6814d32f93c94170262c23e00a3b6132cd9700c0f0f854e999de6d8b76d",
   "blockNumber": null
 }
