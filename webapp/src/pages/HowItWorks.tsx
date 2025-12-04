@@ -96,7 +96,7 @@ const HowItWorks: React.FC = () => {
   return (
     <div style={{ background: '#050709', minHeight: '100vh', paddingTop: 40, paddingBottom: 120 }}>
       {/* Header Section */}
-      <section style={{ padding: '40px 24px 80px' }}>
+      <section style={{ padding: '40px 24px 40px' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -127,6 +127,103 @@ const HowItWorks: React.FC = () => {
               Discover how CipheredSupply-Ledger revolutionizes supply chain management
               through advanced encryption and blockchain technology
             </Paragraph>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Video Demo Section - Moved to Top */}
+      <section style={{ padding: '20px 24px 60px', background: '#050709' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <Card
+              bordered={false}
+              style={{
+                background: 'linear-gradient(135deg, #0F1419 0%, #1A1F2A 100%)',
+                border: '1px solid #2563EB33',
+                borderRadius: 20,
+                overflow: 'hidden',
+                maxWidth: 1000,
+                margin: '0 auto',
+                boxShadow: '0 20px 60px rgba(37, 99, 235, 0.15)',
+              }}
+            >
+              <div style={{ padding: '24px 24px 16px', textAlign: 'center' }}>
+                <Title level={3} style={{ color: '#E5E7EB', marginBottom: 8 }}>
+                  <LockOutlined style={{ marginRight: 12, color: '#2563EB' }} />
+                  Live Demo: FHE-Powered Supply Chain
+                </Title>
+                <Paragraph style={{ color: '#94A3B8', marginBottom: 0 }}>
+                  Watch how encrypted shipment data is submitted and processed on-chain without revealing sensitive information
+                </Paragraph>
+              </div>
+              <div style={{ position: 'relative', width: '100%', padding: '0 24px 24px' }}>
+                <video
+                  controls
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    borderRadius: 12,
+                    background: '#000',
+                    border: '1px solid #1E293B',
+                  }}
+                >
+                  <source src="/test-demo.mp4" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+              <div style={{
+                padding: '16px 24px 24px',
+                display: 'flex',
+                justifyContent: 'center',
+                gap: 24,
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: '#10B981'
+                  }} />
+                  <Text style={{ color: '#94A3B8', fontSize: 13 }}>Connect Wallet</Text>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: '#2563EB'
+                  }} />
+                  <Text style={{ color: '#94A3B8', fontSize: 13 }}>FHE Encryption</Text>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: '#8B5CF6'
+                  }} />
+                  <Text style={{ color: '#94A3B8', fontSize: 13 }}>On-Chain Submit</Text>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: '#F59E0B'
+                  }} />
+                  <Text style={{ color: '#94A3B8', fontSize: 13 }}>View Shipments</Text>
+                </div>
+              </div>
+            </Card>
           </motion.div>
         </div>
       </section>
@@ -362,84 +459,6 @@ const HowItWorks: React.FC = () => {
         </div>
       </section>
 
-      {/* Video Demo Section */}
-      <section style={{ padding: '80px 24px', background: '#050709' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
-            <Title
-              level={2}
-              style={{
-                textAlign: 'center',
-                marginBottom: 24,
-                color: '#E5E7EB',
-                fontSize: 36,
-              }}
-            >
-              Live Demo
-            </Title>
-            <Paragraph
-              style={{
-                textAlign: 'center',
-                fontSize: 16,
-                color: '#94A3B8',
-                maxWidth: 700,
-                margin: '0 auto 48px',
-              }}
-            >
-              Watch how CipheredSupply-Ledger works in action with fully homomorphic encryption
-            </Paragraph>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              viewport={{ once: true }}
-            >
-              <Card
-                bordered={false}
-                style={{
-                  background: '#0F1419',
-                  border: '1px solid #1E293B',
-                  borderRadius: 16,
-                  overflow: 'hidden',
-                  maxWidth: 900,
-                  margin: '0 auto',
-                }}
-              >
-                <div style={{ position: 'relative', width: '100%' }}>
-                  <video
-                    controls
-                    style={{
-                      width: '100%',
-                      height: 'auto',
-                      borderRadius: 8,
-                      background: '#000',
-                    }}
-                    ref={(video) => {
-                      if (video) {
-                        video.playbackRate = 1.5;
-                      }
-                    }}
-                  >
-                    <source src="/test.mp4" type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
-                </div>
-                <div style={{ padding: '24px 0 8px', textAlign: 'center' }}>
-                  <Text style={{ color: '#94A3B8', fontSize: 14 }}>
-                    Demo: Submitting encrypted shipment data with FHE technology
-                  </Text>
-                </div>
-              </Card>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
     </div>
   );
 };
